@@ -25,6 +25,42 @@ requirements.txt
 Atlas adds the release `modules/` directory to `PYTHONPATH`, while
 `commands/hermes.py` also inserts it for local execution.
 
+## Installation
+
+Install Hermes as a named Atlas script release, then regenerate shims when needed:
+
+```bash
+atlas scripts install git+https://github.com/alflag-org/hermes.git#master --name hermes
+atlas runtime install
+atlas scripts shims
+```
+
+For a local checkout:
+
+```bash
+atlas scripts install . --name hermes
+atlas runtime install
+atlas scripts shims
+```
+
+Atlas maps `commands/hermes.py` to the command name `hermes`. Operators should run
+Hermes through Atlas:
+
+```bash
+atlas run hermes host check
+```
+
+Or add `/opt/atlas/shims` to `PATH` and use the generated shim:
+
+```bash
+export PATH="/opt/atlas/shims:$PATH"
+hermes host check
+```
+
+The direct `commands/hermes.py` entrypoint exists for release-local development and
+smoke tests only. Production execution should go through `atlas run` or the shim so
+Atlas can provide the scripts runtime, `atlas_core`, host context, and JSONL run log.
+
 ## Configuration
 
 Hermes config belongs under Atlas-owned configuration:
@@ -51,27 +87,27 @@ atlas run hermes <domain> <action> [options]
 Host:
 
 ```bash
-python3 commands/hermes.py host show --format yaml
-python3 commands/hermes.py host check
+hermes host show --format yaml
+hermes host check
 ```
 
 Cataloga file datasets:
 
 ```bash
-python3 commands/hermes.py cataloga validate --file examples/resources.yaml
-python3 commands/hermes.py cataloga normalize --file examples/resources.yaml --format yaml
-python3 commands/hermes.py --config examples/hermes.yml cataloga export --format yaml
-python3 commands/hermes.py cataloga import --file examples/resources.yaml --format json
+hermes cataloga validate --file examples/resources.yaml
+hermes cataloga normalize --file examples/resources.yaml --format yaml
+hermes --config examples/hermes.yml cataloga export --format yaml
+hermes cataloga import --file examples/resources.yaml --format json
 ```
 
 DNS:
 
 ```bash
-python3 commands/hermes.py dns render-zone --zone alflag.internal --source examples/resources.yaml --output /tmp/alflag.internal.zone
-python3 commands/hermes.py dns check-zone --zone alflag.internal --file /tmp/alflag.internal.zone
-python3 commands/hermes.py --config examples/hermes.yml dns diff-zone --zone alflag.internal --file /tmp/alflag.internal.zone
-python3 commands/hermes.py --config examples/hermes.yml dns apply-zone --zone alflag.internal --file /tmp/alflag.internal.zone
-python3 commands/hermes.py --config examples/hermes.yml dns apply-zone --zone alflag.internal --file /tmp/alflag.internal.zone --apply
+hermes dns render-zone --zone alflag.internal --source examples/resources.yaml --output /tmp/alflag.internal.zone
+hermes dns check-zone --zone alflag.internal --file /tmp/alflag.internal.zone
+hermes --config examples/hermes.yml dns diff-zone --zone alflag.internal --file /tmp/alflag.internal.zone
+hermes --config examples/hermes.yml dns apply-zone --zone alflag.internal --file /tmp/alflag.internal.zone
+hermes --config examples/hermes.yml dns apply-zone --zone alflag.internal --file /tmp/alflag.internal.zone --apply
 ```
 
 DNS apply performs:
@@ -85,10 +121,10 @@ Without `--apply`, it returns a machine-readable apply result with `dry_run: tru
 Proxmox:
 
 ```bash
-python3 commands/hermes.py proxmox collect --site kanagawa01 --raw-file examples/proxmox-state.json
-python3 commands/hermes.py proxmox normalize --site kanagawa01 --file examples/proxmox-state.json
-python3 commands/hermes.py proxmox diff --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
-python3 commands/hermes.py proxmox sync-plan --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
+hermes proxmox collect --site kanagawa01 --raw-file examples/proxmox-state.json
+hermes proxmox normalize --site kanagawa01 --file examples/proxmox-state.json
+hermes proxmox diff --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
+hermes proxmox sync-plan --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
 ```
 
 Live Proxmox collection and `sync --apply` require `proxmox.endpoint`,
@@ -98,9 +134,9 @@ reviewed plan: `update-tags` and `update-description`.
 Reports:
 
 ```bash
-python3 commands/hermes.py report drift --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
-python3 commands/hermes.py report inventory --site kanagawa01 --actual examples/proxmox-state.json --format json
-python3 commands/hermes.py report dns --zone alflag.internal --source examples/resources.yaml
+hermes report drift --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
+hermes report inventory --site kanagawa01 --actual examples/proxmox-state.json --format json
+hermes report dns --zone alflag.internal --source examples/resources.yaml
 ```
 
 ## State

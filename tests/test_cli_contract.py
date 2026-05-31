@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
-import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,9 +14,12 @@ HERMES = REPO_ROOT / "commands" / "hermes.py"
 
 class CliContractTest(unittest.TestCase):
     def run_hermes(self, *args: str) -> subprocess.CompletedProcess[str]:
+        env = dict(os.environ)
+        env["PYTHONPATH"] = "modules" + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
         return subprocess.run(
-            [sys.executable, str(HERMES), *args],
+            [str(HERMES), *args],
             cwd=REPO_ROOT,
+            env=env,
             text=True,
             capture_output=True,
             check=False,
