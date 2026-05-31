@@ -1,0 +1,15 @@
+{
+  "kind": "sync-plan",
+  "version": "v1",
+  "site": "kanagawa01",
+  "domain": "dns",
+  "actions": [
+    {
+      "action": "upsert-record",
+      "zone": "alflag.internal",
+      "name": "kng01-recursive-dns-01",
+      "type": "A",
+      "value": "10.10.10.240"
+    }
+  ]
+}

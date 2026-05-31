@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alflag.org/hermes/schemas/proxmox-state.v1.schema.json",
+  "type": "object",
+  "required": ["kind", "version", "guests"],
+  "properties": {
+    "kind": { "const": "proxmox-state" },
+    "version": { "const": "v1" },
+    "site": { "type": ["string", "null"] },
+    "collected_at": { "type": "string" },
+    "guests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "type", "tags", "ip_addresses"],
+        "properties": {
+          "vmid": { "type": ["integer", "string", "null"] },
+          "name": { "type": "string" },
+          "node": { "type": ["string", "null"] },
+          "type": { "type": "string" },
+          "status": { "type": ["string", "null"] },
+          "site": { "type": ["string", "null"] },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "description": { "type": ["string", "null"] },
+          "ip_addresses": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

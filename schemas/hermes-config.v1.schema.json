@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alflag.org/hermes/schemas/hermes-config.v1.schema.json",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "site": { "type": "string" },
+    "cataloga": {
+      "type": "object",
+      "properties": {
+        "mode": { "const": "file" },
+        "dataset": { "type": "string" }
+      }
+    },
+    "proxmox": {
+      "type": "object",
+      "properties": {
+        "endpoint": { "type": "string" },
+        "token_id_env": { "type": "string" },
+        "token_secret_env": { "type": "string" },
+        "verify_tls": { "type": "boolean" }
+      }
+    },
+    "dns": {
+      "type": "object",
+      "properties": {
+        "zones": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["zone_file"],
+            "properties": {
+              "zone_file": { "type": "string" },
+              "check_command": { "type": "string" },
+              "reload_command": { "type": "string" },
+              "backup_dir": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "properties": {
+        "site": { "type": "string" },
+        "format": { "enum": ["text", "json", "yaml"] },
+        "dry_run": { "type": "boolean" }
+      }
+    }
+  }
+}

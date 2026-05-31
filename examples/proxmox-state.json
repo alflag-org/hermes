@@ -1,0 +1,19 @@
+{
+  "kind": "proxmox-state",
+  "version": "v1",
+  "site": "kanagawa01",
+  "collected_at": "2026-05-31T12:00:00+09:00",
+  "guests": [
+    {
+      "vmid": 240,
+      "name": "kng01-recursive-dns-01",
+      "node": "pve01",
+      "type": "qemu",
+      "status": "running",
+      "site": "kanagawa01",
+      "tags": ["dns"],
+      "description": "Old description",
+      "ip_addresses": ["10.10.10.240"]
+    }
+  ]
+}

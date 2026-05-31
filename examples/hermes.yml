@@ -1,0 +1,24 @@
+site: kanagawa01
+
+cataloga:
+  mode: file
+  dataset: examples/resources.yaml
+
+proxmox:
+  endpoint: https://pve.example.internal:8006
+  token_id_env: HERMES_PROXMOX_TOKEN_ID
+  token_secret_env: HERMES_PROXMOX_TOKEN_SECRET
+  verify_tls: true
+
+dns:
+  zones:
+    alflag.internal:
+      zone_file: /tmp/hermes-example/alflag.internal.zone
+      check_command: nsd-checkzone
+      reload_command: "true"
+      backup_dir: /tmp/hermes-example/backups
+
+defaults:
+  site: kanagawa01
+  format: text
+  dry_run: true

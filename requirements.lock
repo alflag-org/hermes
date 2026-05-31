@@ -1,0 +1,5 @@
+# Runtime dependencies are intentionally small for an Atlas script release.
+# Regenerate with the target host's package manager if pinned hashes are needed.
+PyYAML>=6.0
+jsonschema>=4.0
+proxmoxer>=2.0

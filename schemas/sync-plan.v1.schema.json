@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://alflag.org/hermes/schemas/sync-plan.v1.schema.json",
+  "type": "object",
+  "required": ["kind", "version", "domain", "actions"],
+  "properties": {
+    "kind": { "const": "sync-plan" },
+    "version": { "const": "v1" },
+    "site": { "type": ["string", "null"] },
+    "domain": { "type": "string" },
+    "actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action"],
+        "properties": {
+          "action": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    }
+  }
+}
