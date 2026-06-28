@@ -13,7 +13,7 @@ MODULES_PATH = str(MODULES)
 sys.path = [path for path in sys.path if path != MODULES_PATH]
 sys.path.insert(0, MODULES_PATH)
 
-from hermes.cli import main
+from hermes.cli import main  # noqa: E402
 
 
 if __name__ == "__main__":

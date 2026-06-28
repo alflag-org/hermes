@@ -1,15 +1,8 @@
 from __future__ import annotations
 
+from hermes.inventory.network import active_networks
 
-KANAGAWA01_FIXTURE = {
-    "site": "kanagawa01",
-    "networks": {
-        "client": {"vlan": 100, "cidr": "10.10.0.0/24"},
-        "mgmt": {"vlan": 110, "cidr": "10.10.10.0/24"},
-        "dmz": {"vlan": 130, "cidr": "10.10.30.0/24"},
-        "transit": {"vlan": 901, "cidr": "10.255.255.0/29"},
-    },
-}
+KANAGAWA01_FIXTURE = {"site": "kanagawa01", "networks": active_networks()}
 
 
 def site_fixture(site: str) -> dict:
