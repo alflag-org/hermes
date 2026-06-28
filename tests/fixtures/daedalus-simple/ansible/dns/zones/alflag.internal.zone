@@ -1,0 +1,12 @@
+$ORIGIN alflag.internal.
+$TTL 300
+@ IN SOA ns1.alflag.internal. hostmaster.alflag.internal. (
+  2026060101 ; serial
+  3600 ; refresh
+  900 ; retry
+  1209600 ; expire
+  300 ; minimum
+)
+@ IN NS ns1
+ns1 IN A 10.10.30.53
+resolver IN A 10.10.10.240
