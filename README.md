@@ -1,19 +1,69 @@
 # Hermes
 
 Hermes is an Atlas script release for operator-triggered infrastructure operations.
-It is an operation gateway, not a daemon and not a convergence engine.
+It helps operators inspect current state, summarize Daedalus inventory, render reports,
+and prepare reviewable plans.
+
+Hermes is not a daemon, monitoring system, scheduler, convergence engine, or dangerous
+operations runner.
 
 ```text
-Hermes = infrastructure operation gateway
+Atlas    = runtime / release install / shim / host context / run log
+Daedalus = desired state and Ansible convergence
+Hermes   = daily operations helper, inventory/report/plan generator
+Themis   = future strict read-only checks/probes/preflight validation
+Ares     = future dangerous operations: cutover, failover, rollback, break-glass
 ```
 
-It connects actual infrastructure state, Cataloga-style desired datasets, DNS zone
-files, Proxmox inventory, and operator-readable reports. Mutating commands are dry-run
-by default and require an explicit `--apply`.
+Zabbix has been retired. Hermes does not include Zabbix sync, host/item/template logic,
+or any active monitoring integration.
+
+## Safety Model
+
+Default Hermes behavior is read, inspect, report, plan, or diff. Mutation is never
+implicit. Transitional mutation commands require explicit `--apply` and remain dry-run
+by default.
+
+Allowed by default:
+
+- local file reads
+- Daedalus inventory reads
+- KANAGAWA01 network model reads
+- JSON, YAML, Markdown, and text report generation
+- DNS zone render, check, and diff
+- Proxmox state normalization from captured files
+- dry-run plans
+- output file writes only when `--output` is passed
+
+Out of scope:
+
+- Ansible apply or converge
+- daemon or scheduler behavior
+- monitoring sync
+- Zabbix integration
+- Cloudflare write operations
+- Proxmox VM/LXC provisioning
+- DNS cutover workflows
+- failover, rollback, or break-glass SSH changes
+
+## KANAGAWA01 Networks
+
+Active:
+
+| VLAN | Name | CIDR | Gateway | Purpose |
+| ---: | --- | --- | --- | --- |
+| 100 | CLIENT | 10.10.0.0/24 | 10.10.0.1 | home client devices |
+| 110 | MGMT | 10.10.10.0/24 | 10.10.10.1 | management plane |
+| 130 | DMZ | 10.10.30.0/24 | 10.10.30.1 | public-facing / external-entry systems |
+| 901 | TRANSIT | 10.255.255.0/29 | 10.255.255.1 | IX2215 VRRP transit |
+| 999 | UNUSED_NATIVE | | | isolated unused native VLAN |
+
+Deprecated networks are historical only and are not active: `INTERNAL`, `STORAGE`,
+`OVERLAY`, and `IOT`.
 
 ## Atlas Release Layout
 
-Hermes follows the Atlas script release shape:
+Hermes keeps the Atlas script release shape:
 
 ```text
 VERSION
@@ -22,12 +72,12 @@ modules/hermes/
 requirements.txt
 ```
 
-Atlas adds the release `modules/` directory to `PYTHONPATH`, while
-`commands/hermes.py` also inserts it for local execution.
+`commands/hermes.py` is a thin entrypoint. Atlas adds `modules/` to `PYTHONPATH`; the
+entrypoint also inserts it for checkout-local smoke tests.
 
-## Installation
+## Quick Start
 
-Install Hermes as a named Atlas script release, then regenerate shims when needed:
+Install from the repository as a named Atlas script release:
 
 ```bash
 atlas scripts install git+https://github.com/alflag-org/hermes.git#master --name hermes
@@ -35,31 +85,24 @@ atlas runtime install
 atlas scripts shims
 ```
 
-For a local checkout:
+Run through Atlas:
 
 ```bash
-atlas scripts install . --name hermes
-atlas runtime install
-atlas scripts shims
+atlas run hermes context
+atlas run hermes network summary
+atlas run hermes host list --workspace tests/fixtures/daedalus-simple
+atlas run hermes dns report --workspace tests/fixtures/daedalus-simple
+atlas run hermes report summary --workspace tests/fixtures/daedalus-simple --format markdown
 ```
 
-Atlas maps `commands/hermes.py` to the command name `hermes`. Operators should run
-Hermes through Atlas:
-
-```bash
-atlas run hermes host check
-```
-
-Or add `/opt/atlas/shims` to `PATH` and use the generated shim:
+Or use the generated shim:
 
 ```bash
 export PATH="/opt/atlas/shims:$PATH"
-hermes host check
+hermes context
+hermes network summary
+hermes report summary --format markdown
 ```
-
-The direct `commands/hermes.py` entrypoint exists for release-local development and
-smoke tests only. Production execution should go through `atlas run` or the shim so
-Atlas can provide the scripts runtime, `atlas_core`, host context, and JSONL run log.
 
 ## Configuration
 
@@ -75,88 +118,104 @@ the file; store only environment variable names such as `token_id_env` and
 
 See [examples/hermes.yml](examples/hermes.yml).
 
-## CLI
+## Command Categories
 
-Basic shape:
+Read-only:
+
+- `hermes --help`
+- `hermes --version`
+- `hermes context`
+- `hermes network summary`
+- `hermes host show`
+- `hermes host check`
+- `hermes host list`
+- `hermes host summary`
+- `hermes dns report`
+- `hermes report inventory`
+- `hermes report summary`
+- `hermes maintenance sanity-check`
+
+Plan/diff:
+
+- `hermes dns render-zone`
+- `hermes dns check-zone`
+- `hermes dns diff-zone`
+- `hermes proxmox normalize`
+- `hermes proxmox diff`
+- `hermes proxmox sync-plan`
+- `hermes report drift`
+
+Dry-run default transitional mutation:
+
+- `hermes dns apply-zone`
+- `hermes proxmox sync`
+
+Cataloga file dataset commands remain file-oriented:
+
+- `hermes cataloga validate`
+- `hermes cataloga normalize`
+- `hermes cataloga export`
+- `hermes cataloga import`
+
+## Common Examples
 
 ```bash
-hermes <domain> <action> [options]
-atlas run hermes <domain> <action> [options]
-```
+hermes --help
+hermes --version
+hermes context
+hermes context --workspace tests/fixtures/daedalus-simple
 
-Host:
+hermes network summary
+hermes network summary --format json
+hermes network summary --format markdown
 
-```bash
-hermes host show --format yaml
+hermes host show
 hermes host check
+hermes host list --workspace tests/fixtures/daedalus-simple
+hermes host list --zone mgmt --workspace tests/fixtures/daedalus-simple
+hermes host summary --workspace tests/fixtures/daedalus-simple
+
+hermes dns report --workspace tests/fixtures/daedalus-simple
+
+hermes report summary --workspace tests/fixtures/daedalus-simple
+hermes report summary --workspace tests/fixtures/daedalus-simple --format markdown
+hermes report summary --workspace tests/fixtures/daedalus-simple --format json
 ```
 
-Cataloga file datasets:
+Existing plan-first examples:
 
 ```bash
 hermes cataloga validate --file examples/resources.yaml
 hermes cataloga normalize --file examples/resources.yaml --format yaml
-hermes --config examples/hermes.yml cataloga export --format yaml
-hermes cataloga import --file examples/resources.yaml --format json
-```
 
-DNS:
-
-```bash
 hermes dns render-zone --zone alflag.internal --source examples/resources.yaml --output /tmp/alflag.internal.zone
 hermes dns check-zone --zone alflag.internal --file /tmp/alflag.internal.zone
-hermes --config examples/hermes.yml dns diff-zone --zone alflag.internal --file /tmp/alflag.internal.zone
+hermes dns diff-zone --zone alflag.internal --file /tmp/alflag.internal.zone
 hermes --config examples/hermes.yml dns apply-zone --zone alflag.internal --file /tmp/alflag.internal.zone
-hermes --config examples/hermes.yml dns apply-zone --zone alflag.internal --file /tmp/alflag.internal.zone --apply
+
+hermes proxmox normalize --file examples/proxmox-state.json
+hermes proxmox diff --actual examples/proxmox-state.json --desired examples/resources.yaml
+hermes proxmox sync-plan --actual examples/proxmox-state.json --desired examples/resources.yaml
 ```
 
-DNS apply performs:
+Without `--apply`, `dns apply-zone` and `proxmox sync` return `dry_run: true`.
 
-```text
-check -> backup current zone -> atomic replace -> reload command -> verify
-```
+## Local Development
 
-Without `--apply`, it returns a machine-readable apply result with `dry_run: true`.
-
-Proxmox:
+Hermes must work without Atlas for tests and checkout-local smoke checks:
 
 ```bash
-hermes proxmox collect --site kanagawa01 --raw-file examples/proxmox-state.json
-hermes proxmox normalize --site kanagawa01 --file examples/proxmox-state.json
-hermes proxmox diff --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
-hermes proxmox sync-plan --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
-```
-
-Live Proxmox collection and `sync --apply` require `proxmox.endpoint`,
-`token_id_env`, and `token_secret_env`. Apply is limited to metadata actions from a
-reviewed plan: `update-tags` and `update-description`.
-
-Reports:
-
-```bash
-hermes report drift --site kanagawa01 --actual examples/proxmox-state.json --desired examples/resources.yaml
-hermes report inventory --site kanagawa01 --actual examples/proxmox-state.json --format json
-hermes report dns --zone alflag.internal --source examples/resources.yaml
-```
-
-## State
-
-Hermes is stateless by default. Persist only reviewable artifacts:
-
-```text
-/var/lib/atlas/hermes/cache/
-/var/lib/atlas/hermes/plans/
-/var/lib/atlas/hermes/backups/
-/var/lib/atlas/hermes/reports/
-```
-
-Atlas already records script runs, arguments, duration, and exit codes, so Hermes
-does not implement a separate audit log.
-
-## Verification
-
-The test suite uses standard library `unittest`:
-
-```bash
+PYTHONPATH=modules python3 commands/hermes.py --help
+PYTHONPATH=modules python3 -m hermes --help
 PYTHONPATH=modules python3 -m unittest discover -s tests -v
+pytest
 ```
+
+CI runs dependency install, editable install, `ruff check .`, and `pytest`.
+
+## More Documentation
+
+- [docs/design.md](docs/design.md)
+- [docs/commands.md](docs/commands.md)
+- [docs/atlas-integration.md](docs/atlas-integration.md)
+- [docs/examples.md](docs/examples.md)
