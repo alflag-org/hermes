@@ -15,9 +15,7 @@ SENSITIVE_KEY = re.compile(r"(password|secret|token|credential|api[_-]?key)", re
 
 
 def load_config(path: str | None = None) -> dict[str, Any]:
-    selected = path or os.environ.get("HERMES_CONFIG")
-    if selected is None:
-        selected = str(Path(get_paths().etc) / "hermes.yml")
+    selected = str(resolve_config_path(path))
     target = Path(selected)
     if not target.exists():
         return {}
@@ -26,6 +24,13 @@ def load_config(path: str | None = None) -> dict[str, Any]:
         raise ConfigError(f"Hermes config must be a mapping: {target}")
     _reject_inline_secrets(data, ())
     return data
+
+
+def resolve_config_path(path: str | None = None) -> Path:
+    selected = path or os.environ.get("HERMES_CONFIG")
+    if selected is None:
+        selected = str(Path(get_paths().etc) / "hermes.yml")
+    return Path(selected)
 
 
 def get_default_site(config: dict[str, Any], explicit: str | None = None) -> str | None:

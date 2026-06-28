@@ -10,6 +10,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HERMES = REPO_ROOT / "commands" / "hermes.py"
+FIXTURE = REPO_ROOT / "tests" / "fixtures" / "daedalus-simple"
 
 
 class CliContractTest(unittest.TestCase):
@@ -32,6 +33,51 @@ class CliContractTest(unittest.TestCase):
         payload = json.loads(completed.stdout)
         self.assertEqual(payload["kind"], "host-check")
         self.assertTrue(payload["ok"])
+
+    def test_help_and_version_work(self) -> None:
+        help_result = self.run_hermes("--help")
+        version_result = self.run_hermes("--version")
+
+        self.assertEqual(help_result.returncode, 0, help_result.stderr)
+        self.assertIn("context", help_result.stdout)
+        self.assertEqual(version_result.returncode, 0, version_result.stderr)
+        self.assertIn("hermes", version_result.stdout)
+
+    def test_unknown_command_fails_clearly(self) -> None:
+        completed = self.run_hermes("unknown")
+
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertIn("invalid choice", completed.stderr)
+
+    def test_new_report_commands_emit_parseable_json(self) -> None:
+        commands = [
+            ("context", "--workspace", str(FIXTURE), "--format", "json"),
+            ("network", "summary", "--format", "json"),
+            ("host", "list", "--workspace", str(FIXTURE), "--format", "json"),
+            ("host", "summary", "--workspace", str(FIXTURE), "--format", "json"),
+            ("dns", "report", "--workspace", str(FIXTURE), "--format", "json"),
+            ("report", "summary", "--workspace", str(FIXTURE), "--format", "json"),
+        ]
+        for command in commands:
+            with self.subTest(command=command):
+                completed = self.run_hermes(*command)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                payload = json.loads(completed.stdout)
+                self.assertIn("kind", payload)
+
+    def test_markdown_report_has_stable_headings(self) -> None:
+        completed = self.run_hermes(
+            "report",
+            "summary",
+            "--workspace",
+            str(FIXTURE),
+            "--format",
+            "markdown",
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("# Hermes Operations Summary", completed.stdout)
+        self.assertIn("## Suggested Manual Checks", completed.stdout)
 
     def test_dns_apply_cli_defaults_to_dry_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

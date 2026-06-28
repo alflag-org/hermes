@@ -8,13 +8,15 @@ from typing import Any, Callable
 from hermes import version
 from hermes.cataloga.client import import_plan, load_dataset_from_config
 from hermes.cataloga.dataset import normalize_dataset, validate_dataset
-from hermes.config import get_default_format, get_default_site, load_config
-from hermes.context import get_host_profile, get_paths
+from hermes.config import get_default_format, get_default_site, load_config, resolve_config_path
+from hermes.context import discover_context, get_host_profile, get_paths
 from hermes.dns.apply import apply_zone_file, diff_zone_text
 from hermes.dns.records import normalize_record
 from hermes.dns.render import render_zone_from_source
 from hermes.dns.zone import validate_zone_text
 from hermes.errors import HermesError, UsageError
+from hermes.inventory.daedalus import host_list_report, host_summary_report, load_hosts
+from hermes.inventory.network import network_summary
 from hermes.inventory.site import site_fixture
 from hermes.io import load_data, read_text, write_data, write_text
 from hermes.output import emit
@@ -22,8 +24,10 @@ from hermes.plan import apply_result, sync_plan
 from hermes.proxmox.client import apply_metadata_plan, collect as collect_proxmox
 from hermes.proxmox.diff import diff_state, plan_from_diff
 from hermes.proxmox.normalize import normalize_state
+from hermes.report.dns import dns_inventory_report
 from hermes.report.drift import drift_report
 from hermes.report.inventory import inventory_report
+from hermes.report.summary import operations_summary
 
 
 Handler = Callable[[argparse.Namespace, dict[str, Any]], Any]
@@ -46,8 +50,14 @@ def main(argv: list[str] | None = None) -> None:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="hermes")
     parser.add_argument("--config", help="Path to /etc/atlas/hermes.yml compatible config")
+    parser.add_argument("--workspace", default=argparse.SUPPRESS, help="Daedalus workspace root")
+    parser.add_argument("--site", default=argparse.SUPPRESS, help="Site name such as kanagawa01")
+    parser.add_argument("--strict", action="store_true", help="Treat supported warnings as failures")
+    parser.add_argument("--quiet", action="store_true", help="Reduce non-essential output")
     parser.add_argument("--version", action="version", version=f"%(prog)s {version()}")
     subparsers = parser.add_subparsers(dest="domain", required=True)
+    _add_context(subparsers)
+    _add_network(subparsers)
     _add_host(subparsers)
     _add_cataloga(subparsers)
     _add_dns(subparsers)
@@ -55,6 +65,25 @@ def build_parser() -> argparse.ArgumentParser:
     _add_report(subparsers)
     _add_maintenance(subparsers)
     return parser
+
+
+def _add_context(subparsers: argparse._SubParsersAction) -> None:
+    parser = subparsers.add_parser("context", help="Discover workspace, inventory, and Atlas context")
+    _workspace_arg(parser)
+    _site_arg(parser)
+    _output_arg(parser)
+    _format_arg(parser)
+    parser.set_defaults(handler=_context)
+
+
+def _add_network(subparsers: argparse._SubParsersAction) -> None:
+    parser = subparsers.add_parser("network", help="Summarize static site network definitions")
+    actions = parser.add_subparsers(dest="action", required=True)
+    summary = actions.add_parser("summary")
+    _site_arg(summary)
+    _output_arg(summary)
+    _format_arg(summary)
+    summary.set_defaults(handler=_network_summary)
 
 
 def _add_host(subparsers: argparse._SubParsersAction) -> None:
@@ -66,6 +95,21 @@ def _add_host(subparsers: argparse._SubParsersAction) -> None:
     check = actions.add_parser("check")
     _format_arg(check)
     check.set_defaults(handler=_host_check)
+    list_cmd = actions.add_parser("list")
+    _workspace_arg(list_cmd)
+    _site_arg(list_cmd)
+    list_cmd.add_argument("--zone", choices=("mgmt", "dmz", "client", "transit", "unknown"))
+    list_cmd.add_argument("--group")
+    list_cmd.add_argument("--service")
+    _output_arg(list_cmd)
+    _format_arg(list_cmd)
+    list_cmd.set_defaults(handler=_host_list)
+    summary = actions.add_parser("summary")
+    _workspace_arg(summary)
+    _site_arg(summary)
+    _output_arg(summary)
+    _format_arg(summary)
+    summary.set_defaults(handler=_host_summary)
 
 
 def _add_cataloga(subparsers: argparse._SubParsersAction) -> None:
@@ -93,6 +137,12 @@ def _add_cataloga(subparsers: argparse._SubParsersAction) -> None:
 def _add_dns(subparsers: argparse._SubParsersAction) -> None:
     parser = subparsers.add_parser("dns", help="Render, check, diff, and safely apply NSD zones")
     actions = parser.add_subparsers(dest="action", required=True)
+    report = actions.add_parser("report")
+    _workspace_arg(report)
+    _site_arg(report)
+    _output_arg(report)
+    _format_arg(report)
+    report.set_defaults(handler=_dns_report)
     render = actions.add_parser("render-zone")
     render.add_argument("--zone", required=True)
     render.add_argument("--source", required=True)
@@ -172,9 +222,16 @@ def _add_report(subparsers: argparse._SubParsersAction) -> None:
     drift.set_defaults(handler=_report_drift)
     inventory = actions.add_parser("inventory")
     inventory.add_argument("--site")
-    inventory.add_argument("--actual", required=True)
+    inventory.add_argument("--actual")
+    _workspace_arg(inventory)
     _format_arg(inventory, default="text")
     inventory.set_defaults(handler=_report_inventory)
+    summary = actions.add_parser("summary")
+    _workspace_arg(summary)
+    _site_arg(summary)
+    _output_arg(summary)
+    _format_arg(summary, default="text")
+    summary.set_defaults(handler=_report_summary)
     dns = actions.add_parser("dns")
     dns.add_argument("--zone", required=True)
     dns.add_argument("--source")
@@ -192,7 +249,29 @@ def _add_maintenance(subparsers: argparse._SubParsersAction) -> None:
 
 
 def _format_arg(parser: argparse.ArgumentParser, default: str | None = "text") -> None:
-    parser.add_argument("--format", choices=("text", "json", "yaml"), default=default)
+    parser.add_argument("--format", choices=("text", "json", "yaml", "markdown"), default=default)
+
+
+def _workspace_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--workspace", default=argparse.SUPPRESS, help="Daedalus workspace root")
+
+
+def _site_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--site", default=argparse.SUPPRESS, help="Site name such as kanagawa01")
+
+
+def _output_arg(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--output")
+
+
+def _context(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any] | None:
+    result = _discover(args, config)
+    return _maybe_write(args, result)
+
+
+def _network_summary(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any] | None:
+    site = get_default_site(config, getattr(args, "site", None))
+    return _maybe_write(args, network_summary(site or "kanagawa01"))
 
 
 def _host_show(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
@@ -213,6 +292,28 @@ def _host_check(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, A
     if not host.name:
         errors.append("host.name is empty")
     return {"kind": "host-check", "version": "v1", "ok": not errors, "checks": checks, "errors": errors}
+
+
+def _host_list(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any] | None:
+    context = _discover(args, config)
+    hosts, warnings = load_hosts(context.get("inventory_path"))
+    result = host_list_report(
+        hosts,
+        _combined_warnings(context, warnings),
+        zone=args.zone,
+        group=args.group,
+        service=args.service,
+    )
+    result["context"] = context
+    return _maybe_write(args, result)
+
+
+def _host_summary(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any] | None:
+    context = _discover(args, config)
+    hosts, warnings = load_hosts(context.get("inventory_path"))
+    result = host_summary_report(hosts, _combined_warnings(context, warnings))
+    result["context"] = context
+    return _maybe_write(args, result)
 
 
 def _cataloga_validate(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
@@ -255,6 +356,18 @@ def _dns_diff_zone(args: argparse.Namespace, config: dict[str, Any]) -> dict[str
 def _dns_apply_zone(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
     zone_config = _zone_config(config, args.zone)
     return apply_zone_file(args.zone, args.file, zone_config, args.apply)
+
+
+def _dns_report(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any] | None:
+    context = _discover(args, config)
+    hosts, warnings = load_hosts(context.get("inventory_path"))
+    result = dns_inventory_report(
+        workspace=context.get("workspace"),
+        hosts=hosts,
+        inventory_warnings=_combined_warnings(context, warnings),
+    )
+    result["context"] = context
+    return _maybe_write(args, result)
 
 
 def _dns_upsert_record(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
@@ -308,7 +421,37 @@ def _report_drift(args: argparse.Namespace, config: dict[str, Any]) -> dict[str,
 
 
 def _report_inventory(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
-    return inventory_report(load_data(args.actual), get_default_site(config, args.site))
+    site = get_default_site(config, getattr(args, "site", None))
+    if args.actual:
+        return inventory_report(load_data(args.actual), site)
+    context = _discover(args, config)
+    hosts, warnings = load_hosts(context.get("inventory_path"))
+    result = host_list_report(hosts, _combined_warnings(context, warnings))
+    result["kind"] = "inventory-report"
+    result["site"] = context.get("site")
+    result["context"] = context
+    return result
+
+
+def _report_summary(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any] | None:
+    context = _discover(args, config)
+    hosts, warnings = load_hosts(context.get("inventory_path"))
+    host_summary = host_summary_report(hosts, _combined_warnings(context, warnings))
+    networks = network_summary(context.get("site") or "kanagawa01")
+    dns = dns_inventory_report(
+        workspace=context.get("workspace"),
+        hosts=hosts,
+        inventory_warnings=_combined_warnings(context, warnings),
+    )
+    dns["context"] = context
+    result = operations_summary(
+        context=context,
+        networks=networks,
+        hosts=hosts,
+        host_summary=host_summary,
+        dns=dns,
+    )
+    return _maybe_write(args, result)
 
 
 def _report_dns(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
@@ -358,3 +501,30 @@ def _current_zone_text(zone: str, explicit_path: str | None, config: dict[str, A
         return ""
     target = Path(path)
     return target.read_text(encoding="utf-8") if target.exists() else ""
+
+
+def _discover(args: argparse.Namespace, config: dict[str, Any]) -> dict[str, Any]:
+    return discover_context(
+        workspace=getattr(args, "workspace", None),
+        site=getattr(args, "site", None),
+        config=config,
+        config_path=resolve_config_path(args.config),
+    )
+
+
+def _combined_warnings(context: dict[str, Any], warnings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [*context.get("warnings", []), *warnings]
+
+
+def _maybe_write(args: argparse.Namespace, result: dict[str, Any]) -> dict[str, Any] | None:
+    output = getattr(args, "output", None)
+    if not output:
+        return result
+    fmt = getattr(args, "format", None) or "text"
+    if fmt in {"json", "yaml"}:
+        write_data(output, result, fmt)
+    else:
+        from hermes.output import render_markdown, render_text
+
+        write_text(output, render_markdown(result) if fmt == "markdown" else render_text(result))
+    return None

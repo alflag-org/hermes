@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from hermes.cataloga.dataset import normalize_dataset
 from hermes.dns.records import records_from_dataset
 from hermes.dns.zone import render_zone
