@@ -1,0 +1,38 @@
+version: 1
+resources:
+  - id: host-control01
+    type: host
+    name: control01
+    description: Management control host
+    lifecycle: active
+    tags:
+      managed_by: daedalus
+      site: kanagawa01
+      zone: mgmt
+    spec:
+      daedalus_host: control01
+      address: 10.10.10.11
+      provider: proxmox
+      platform: vm
+      services:
+        - control
+      capabilities:
+        - admin
+  - id: host-web01
+    type: host
+    name: web01
+    description: Public-facing web host
+    lifecycle: active
+    tags:
+      managed_by: daedalus
+      site: kanagawa01
+      zone: dmz
+    spec:
+      daedalus_host: web01
+      address: 10.10.30.21
+      provider: proxmox
+      platform: vm
+      services:
+        - web
+      capabilities:
+        - public_http

@@ -26,7 +26,11 @@ def dns_inventory_report(
         name = str(host.get("name") or "")
         groups = [str(group) for group in host.get("groups", [])]
         services = [str(service) for service in host.get("services", [])]
-        lowered_tokens = [name.lower(), *(group.lower() for group in groups), *(service.lower() for service in services)]
+        lowered_tokens = [
+            name.lower(),
+            *(group.lower() for group in groups),
+            *(service.lower() for service in services),
+        ]
         if any(_contains_hint(token, AUTHORITATIVE_HINTS) for token in lowered_tokens):
             authoritative_hosts.add(name)
         if any(_contains_hint(token, RECURSIVE_HINTS) for token in lowered_tokens):
@@ -38,15 +42,25 @@ def dns_inventory_report(
     zone_files = _detect_zone_files(workspace)
     warnings = list(inventory_warnings or [])
     if not authoritative_hosts:
-        warnings.append(warning("dns-authoritative-unknown", "no authoritative DNS hosts were inferred"))
+        warnings.append(
+            warning("dns-authoritative-unknown", "no authoritative DNS hosts were inferred")
+        )
     if not recursive_hosts:
         warnings.append(warning("dns-recursive-unknown", "no recursive DNS hosts were inferred"))
     if not dns_groups:
-        warnings.append(warning("dns-groups-unknown", "no DNS-related inventory groups were inferred"))
+        warnings.append(
+            warning("dns-groups-unknown", "no DNS-related inventory groups were inferred")
+        )
     if workspace is None:
-        warnings.append(warning("dns-workspace-missing", "zone files cannot be detected without a workspace"))
+        warnings.append(
+            warning("dns-workspace-missing", "zone files cannot be detected without a workspace")
+        )
     elif not zone_files:
-        warnings.append(warning("dns-zone-files-unknown", "no likely zone files were detected", source=workspace))
+        warnings.append(
+            warning(
+                "dns-zone-files-unknown", "no likely zone files were detected", source=workspace
+            )
+        )
 
     return {
         "kind": "dns-report",
@@ -84,4 +98,6 @@ def _detect_zone_files(workspace: str | None) -> list[str]:
 
 
 def _skip_path(path: Path) -> bool:
-    return any(part in {".git", "__pycache__", ".pytest_cache", ".ruff_cache"} for part in path.parts)
+    return any(
+        part in {".git", "__pycache__", ".pytest_cache", ".ruff_cache"} for part in path.parts
+    )

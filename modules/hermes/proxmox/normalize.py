@@ -8,7 +8,9 @@ from hermes.plan import now_iso
 def normalize_state(raw: Any, site: str | None = None) -> dict[str, Any]:
     if isinstance(raw, dict) and raw.get("kind") == "proxmox-state":
         state = dict(raw)
-        state["guests"] = [_normalize_guest(guest, site or state.get("site")) for guest in state.get("guests", [])]
+        state["guests"] = [
+            _normalize_guest(guest, site or state.get("site")) for guest in state.get("guests", [])
+        ]
         return state
     guests = _extract_guests(raw)
     return {
@@ -53,7 +55,9 @@ def _normalize_guest(guest: dict[str, Any], site: str | None) -> dict[str, Any]:
         "site": guest.get("site") or site,
         "tags": sorted(str(tag) for tag in tags),
         "description": guest.get("description") or guest.get("notes"),
-        "ip_addresses": _normalize_ips(guest.get("ip_addresses") or guest.get("ips") or guest.get("ip")),
+        "ip_addresses": _normalize_ips(
+            guest.get("ip_addresses") or guest.get("ips") or guest.get("ip")
+        ),
     }
 
 

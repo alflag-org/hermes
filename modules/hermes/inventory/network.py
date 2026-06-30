@@ -100,7 +100,9 @@ KANAGAWA01_NETWORKS: tuple[NetworkDefinition, ...] = (
 
 def network_summary(site: str | None = "kanagawa01") -> dict[str, Any]:
     active = [network.to_dict() for network in KANAGAWA01_NETWORKS if network.status == "active"]
-    deprecated = [network.to_dict() for network in KANAGAWA01_NETWORKS if network.status == "deprecated"]
+    deprecated = [
+        network.to_dict() for network in KANAGAWA01_NETWORKS if network.status == "deprecated"
+    ]
     warnings: list[dict[str, Any]] = []
     selected_site = site or "kanagawa01"
     if selected_site != "kanagawa01":

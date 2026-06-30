@@ -44,7 +44,9 @@ def apply_metadata_plan(config: dict[str, Any], actions: list[dict[str, Any]]) -
             payload["description"] = action.get("description") or ""
         _guest_config(api, target["node"], target["type"], int(vmid)).put(**payload)
         applied += 1
-        details.append({"action": action_name, "vmid": vmid, "node": target["node"], "type": target["type"]})
+        details.append(
+            {"action": action_name, "vmid": vmid, "node": target["node"], "type": target["type"]}
+        )
     return {
         "kind": "apply-result",
         "version": "v1",

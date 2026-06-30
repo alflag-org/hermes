@@ -12,7 +12,9 @@ SERVICE_PREFIXES = ("svc_", "cap_", "platform_", "provider_")
 ZONE_NAMES = ("mgmt", "dmz", "client", "transit")
 
 
-def load_hosts(inventory_path: str | Path | None) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+def load_hosts(
+    inventory_path: str | Path | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     warnings: list[dict[str, Any]] = []
     if inventory_path is None:
         return [], [warning("inventory-missing", "no inventory path was discovered")]
@@ -25,10 +27,14 @@ def load_hosts(inventory_path: str | Path | None) -> tuple[list[dict[str, Any]],
         try:
             data = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
         except yaml.YAMLError as exc:
-            warnings.append(warning("inventory-yaml-error", str(exc), severity="error", source=str(source)))
+            warnings.append(
+                warning("inventory-yaml-error", str(exc), severity="error", source=str(source))
+            )
             continue
         if not isinstance(data, dict):
-            warnings.append(warning("inventory-ignored", "inventory file is not a mapping", source=str(source)))
+            warnings.append(
+                warning("inventory-ignored", "inventory file is not a mapping", source=str(source))
+            )
             continue
         _walk_inventory(data, source, hosts)
 
@@ -74,12 +80,16 @@ def host_list_report(
     }
 
 
-def host_summary_report(hosts: list[dict[str, Any]], warnings: list[dict[str, Any]]) -> dict[str, Any]:
+def host_summary_report(
+    hosts: list[dict[str, Any]], warnings: list[dict[str, Any]]
+) -> dict[str, Any]:
     zones: dict[str, int] = {}
     groups: dict[str, int] = {}
     services: dict[str, int] = {}
     for host in hosts:
-        zones[str(host.get("zone") or "unknown")] = zones.get(str(host.get("zone") or "unknown"), 0) + 1
+        zones[str(host.get("zone") or "unknown")] = (
+            zones.get(str(host.get("zone") or "unknown"), 0) + 1
+        )
         for group in host.get("groups", []):
             groups[group] = groups.get(group, 0) + 1
         for service in host.get("services", []):
@@ -101,7 +111,9 @@ def _inventory_files(root: Path) -> list[Path]:
     return sorted(
         path
         for path in root.rglob("*")
-        if path.is_file() and path.suffix.lower() in {".yml", ".yaml"} and "group_vars" not in path.parts
+        if path.is_file()
+        and path.suffix.lower() in {".yml", ".yaml"}
+        and "group_vars" not in path.parts
     )
 
 
@@ -205,7 +217,10 @@ def _infer_zone(hostname: str, groups: tuple[str, ...]) -> str:
             return zone
     lowered_groups = [group.lower() for group in groups]
     for zone in ZONE_NAMES:
-        if any(group == zone or group == f"zone_{zone}" or zone in group.split("_") for group in lowered_groups):
+        if any(
+            group == zone or group == f"zone_{zone}" or zone in group.split("_")
+            for group in lowered_groups
+        ):
             return zone
     return "unknown"
 

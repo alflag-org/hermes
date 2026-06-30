@@ -4,6 +4,102 @@ The examples below use the repository fixture workspace:
 
 ```text
 tests/fixtures/daedalus-simple
+tests/fixtures/manifest-goal
+```
+
+## Manifest Check
+
+```bash
+hermes manifest check --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+```
+
+```text
+ok: true
+hosts: 2
+```
+
+## Daedalus Projection
+
+```bash
+hermes daedalus render --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+```
+
+```yaml
+all:
+  children:
+    default:
+      children:
+        dmz:
+          hosts:
+            web01:
+              ansible_host: 10.10.30.21
+```
+
+```bash
+hermes daedalus diff \
+  --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 \
+  --inventory tests/fixtures/manifest-goal/ansible/inventories/default/hosts.yml \
+  --format markdown
+```
+
+## Cataloga Projection
+
+```bash
+hermes cataloga render --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+```
+
+```yaml
+version: 1
+resources:
+  - id: host-control01
+    type: host
+    name: control01
+```
+
+```bash
+hermes cataloga plan \
+  --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 \
+  --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml \
+  --output /tmp/cataloga-host-import.yaml
+```
+
+The plan command writes only the requested local artifact and does not call Cataloga.
+
+## Atlas Projection
+
+```bash
+hermes atlas render-host --manifest tests/fixtures/manifest-goal/manifests/hosts/kanagawa01/web01.yml
+```
+
+```yaml
+name: web01
+site: kanagawa01
+zone: dmz
+role: web
+environment: home
+runtime_kind: vm
+tags:
+  - cap-public-http
+  - managed-daedalus
+  - svc-web
+```
+
+## Projection Report
+
+```bash
+hermes report projections \
+  --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 \
+  --inventory tests/fixtures/manifest-goal/ansible/inventories/default/hosts.yml \
+  --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml \
+  --format markdown
+```
+
+```markdown
+# Projection Report
+
+## Status
+
+## Recommended Next Review Actions
 ```
 
 ## Context

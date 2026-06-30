@@ -54,7 +54,9 @@ def _reject_inline_secrets(value: Any, path: tuple[str, ...]) -> None:
             if SENSITIVE_KEY.search(key_text) and not key_text.endswith("_env"):
                 if child not in (None, ""):
                     joined = ".".join((*path, key_text))
-                    raise ConfigError(f"inline secret-like value is not allowed in config: {joined}")
+                    raise ConfigError(
+                        f"inline secret-like value is not allowed in config: {joined}"
+                    )
             _reject_inline_secrets(child, (*path, key_text))
     elif isinstance(value, list):
         for index, child in enumerate(value):

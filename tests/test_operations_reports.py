@@ -49,7 +49,9 @@ class OperationsReportsTest(unittest.TestCase):
         context = discover_context(workspace=str(FIXTURE), config_path="/tmp/hermes.yml")
         hosts, warnings = load_hosts(context["inventory_path"])
 
-        report = dns_inventory_report(workspace=context["workspace"], hosts=hosts, inventory_warnings=warnings)
+        report = dns_inventory_report(
+            workspace=context["workspace"], hosts=hosts, inventory_warnings=warnings
+        )
 
         self.assertEqual(report["authoritative_hosts"], ["kng01-dmz-authoritative-dns-01"])
         self.assertEqual(report["recursive_hosts"], ["kng01-mgmt-recursive-dns-01"])
@@ -60,7 +62,9 @@ class OperationsReportsTest(unittest.TestCase):
         context = discover_context(workspace=str(FIXTURE), config_path="/tmp/hermes.yml")
         hosts, warnings = load_hosts(context["inventory_path"])
         host_summary = host_summary_report(hosts, warnings)
-        dns = dns_inventory_report(workspace=context["workspace"], hosts=hosts, inventory_warnings=warnings)
+        dns = dns_inventory_report(
+            workspace=context["workspace"], hosts=hosts, inventory_warnings=warnings
+        )
         summary = operations_summary(
             context=context,
             networks=network_summary("kanagawa01"),

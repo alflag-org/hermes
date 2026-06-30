@@ -159,14 +159,18 @@ def discover_workspace(
     if explicit:
         path = Path(explicit).expanduser().resolve()
         if not path.exists():
-            warnings.append(warning("workspace-missing", "explicit workspace does not exist", source=str(path)))
+            warnings.append(
+                warning("workspace-missing", "explicit workspace does not exist", source=str(path))
+            )
         return path, warnings
 
     env_workspace = os.environ.get("HERMES_WORKSPACE")
     if env_workspace:
         path = Path(env_workspace).expanduser().resolve()
         if not path.exists():
-            warnings.append(warning("workspace-missing", "HERMES_WORKSPACE does not exist", source=str(path)))
+            warnings.append(
+                warning("workspace-missing", "HERMES_WORKSPACE does not exist", source=str(path))
+            )
         return path, warnings
 
     search_from = (cwd or Path.cwd()).resolve()
@@ -178,11 +182,17 @@ def discover_workspace(
             return candidate, warnings
 
     selected_config = config or {}
-    configured = selected_config.get("workspace") or (selected_config.get("defaults") or {}).get("workspace")
+    configured = selected_config.get("workspace") or (selected_config.get("defaults") or {}).get(
+        "workspace"
+    )
     if configured:
         path = Path(str(configured)).expanduser().resolve()
         if not path.exists():
-            warnings.append(warning("workspace-missing", "configured workspace does not exist", source=str(path)))
+            warnings.append(
+                warning(
+                    "workspace-missing", "configured workspace does not exist", source=str(path)
+                )
+            )
         return path, warnings
     return None, warnings
 

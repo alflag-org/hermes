@@ -11,12 +11,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 HERMES = REPO_ROOT / "commands" / "hermes.py"
 FIXTURE = REPO_ROOT / "tests" / "fixtures" / "daedalus-simple"
+MANIFEST_FIXTURE = REPO_ROOT / "tests" / "fixtures" / "manifest-goal"
+MANIFESTS = MANIFEST_FIXTURE / "manifests" / "hosts" / "kanagawa01"
 
 
 class CliContractTest(unittest.TestCase):
     def run_hermes(self, *args: str) -> subprocess.CompletedProcess[str]:
         env = dict(os.environ)
-        env["PYTHONPATH"] = "modules" + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+        env["PYTHONPATH"] = "modules" + (
+            os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+        )
         return subprocess.run(
             [str(HERMES), *args],
             cwd=REPO_ROOT,
@@ -78,6 +82,29 @@ class CliContractTest(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertIn("# Hermes Operations Summary", completed.stdout)
         self.assertIn("## Suggested Manual Checks", completed.stdout)
+
+    def test_goal_command_surface_emits_parseable_json(self) -> None:
+        commands = [
+            ("manifest", "check", "--manifests", str(MANIFESTS), "--format", "json"),
+            ("manifest", "list", "--manifests", str(MANIFESTS), "--format", "json"),
+            ("daedalus", "render", "--manifests", str(MANIFESTS), "--format", "json"),
+            ("cataloga", "render", "--manifests", str(MANIFESTS), "--format", "json"),
+            (
+                "atlas",
+                "render-host",
+                "--manifest",
+                str(MANIFESTS / "web01.yml"),
+                "--format",
+                "json",
+            ),
+            ("report", "hosts", "--manifests", str(MANIFESTS), "--format", "json"),
+        ]
+        for command in commands:
+            with self.subTest(command=command):
+                completed = self.run_hermes(*command)
+                self.assertEqual(completed.returncode, 0, completed.stderr)
+                payload = json.loads(completed.stdout)
+                self.assertTrue(payload)
 
     def test_dns_apply_cli_defaults_to_dry_run(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

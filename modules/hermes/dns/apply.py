@@ -15,7 +15,9 @@ from hermes.plan import apply_result, now_iso
 
 def diff_zone_text(zone: str, desired_text: str, current_text: str | None) -> dict[str, Any]:
     desired_records = {record_tuple(record): record for record in parse_zone_records(desired_text)}
-    current_records = {record_tuple(record): record for record in parse_zone_records(current_text or "")}
+    current_records = {
+        record_tuple(record): record for record in parse_zone_records(current_text or "")
+    }
     actions: list[dict[str, Any]] = []
     for key, record in sorted(desired_records.items()):
         if key not in current_records:
@@ -31,7 +33,9 @@ def diff_zone_text(zone: str, desired_text: str, current_text: str | None) -> di
     }
 
 
-def apply_zone_file(zone: str, desired_file: str, zone_config: dict[str, Any], apply: bool) -> dict[str, Any]:
+def apply_zone_file(
+    zone: str, desired_file: str, zone_config: dict[str, Any], apply: bool
+) -> dict[str, Any]:
     desired = read_text(desired_file)
     check = validate_zone_text(zone, desired)
     if not check["ok"]:

@@ -1,0 +1,10 @@
+name: web01
+site: kanagawa01
+zone: dmz
+role: web
+environment: home
+runtime_kind: vm
+tags:
+  - cap-public-http
+  - managed-daedalus
+  - svc-web

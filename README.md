@@ -1,16 +1,23 @@
 # Hermes
 
-Hermes is an Atlas script release for operator-triggered infrastructure operations.
-It helps operators inspect current state, summarize Daedalus inventory, render reports,
-and prepare reviewable plans.
+Hermes is a small read-only CLI for auditing host manifest YAML and the projections
+derived from it. The host manifest is the source of truth; Daedalus inventory,
+Catalaga datasets, and Atlas host context are projections that Hermes can render,
+diff, and report.
 
-Hermes is not a daemon, monitoring system, scheduler, convergence engine, or dangerous
-operations runner.
+Hermes is not an operations gateway, daemon, monitoring system, scheduler,
+convergence engine, or dangerous operations runner.
 
 ```text
+host manifest = source of truth
+Daedalus inventory = Ansible convergence projection
+Catalaga dataset = catalog projection
+Atlas host.yml = runtime context projection
+Hermes = read-only auditor / reporter / projection planner
+
 Atlas    = runtime / release install / shim / host context / run log
-Daedalus = desired state and Ansible convergence
-Hermes   = daily operations helper, inventory/report/plan generator
+Daedalus = Ansible convergence projection
+Hermes   = manifest auditor, reporter, and projection planner
 Themis   = future strict read-only checks/probes/preflight validation
 Ares     = future dangerous operations: cutover, failover, rollback, break-glass
 ```
@@ -27,6 +34,9 @@ by default.
 Allowed by default:
 
 - local file reads
+- host manifest validation
+- Daedalus, Cataloga, and Atlas projection rendering
+- projection diff and report generation
 - Daedalus inventory reads
 - KANAGAWA01 network model reads
 - JSON, YAML, Markdown, and text report generation
@@ -37,6 +47,9 @@ Allowed by default:
 
 Out of scope:
 
+- editing host manifests
+- editing Daedalus inventory or Ansible host_vars
+- writing Cataloga DB records or calling Cataloga write APIs
 - Ansible apply or converge
 - daemon or scheduler behavior
 - monitoring sync
@@ -91,6 +104,8 @@ Run through Atlas:
 atlas run hermes context
 atlas run hermes network summary
 atlas run hermes host list --workspace tests/fixtures/daedalus-simple
+atlas run hermes manifest check --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+atlas run hermes daedalus render --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
 atlas run hermes dns report --workspace tests/fixtures/daedalus-simple
 atlas run hermes report summary --workspace tests/fixtures/daedalus-simple --format markdown
 ```
@@ -125,18 +140,30 @@ Read-only:
 - `hermes --help`
 - `hermes --version`
 - `hermes context`
+- `hermes manifest list`
+- `hermes manifest summary`
+- `hermes manifest check`
 - `hermes network summary`
 - `hermes host show`
 - `hermes host check`
 - `hermes host list`
 - `hermes host summary`
 - `hermes dns report`
+- `hermes report hosts`
 - `hermes report inventory`
 - `hermes report summary`
 - `hermes maintenance sanity-check`
 
 Plan/diff:
 
+- `hermes daedalus render`
+- `hermes daedalus diff`
+- `hermes cataloga render`
+- `hermes cataloga diff`
+- `hermes cataloga plan`
+- `hermes atlas render-host`
+- `hermes atlas diff-host`
+- `hermes report projections`
 - `hermes dns render-zone`
 - `hermes dns check-zone`
 - `hermes dns diff-zone`
@@ -152,6 +179,9 @@ Dry-run default transitional mutation:
 
 Cataloga file dataset commands remain file-oriented:
 
+- `hermes cataloga render`
+- `hermes cataloga diff`
+- `hermes cataloga plan`
 - `hermes cataloga validate`
 - `hermes cataloga normalize`
 - `hermes cataloga export`
@@ -164,6 +194,23 @@ hermes --help
 hermes --version
 hermes context
 hermes context --workspace tests/fixtures/daedalus-simple
+
+hermes manifest list --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+hermes manifest summary --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --format markdown
+hermes manifest check --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+
+hermes daedalus render --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+hermes daedalus diff --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --inventory tests/fixtures/manifest-goal/ansible/inventories/default/hosts.yml
+
+hermes cataloga render --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01
+hermes cataloga diff --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml
+hermes cataloga plan --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml --output /tmp/cataloga-host-import.yaml
+
+hermes atlas render-host --manifest tests/fixtures/manifest-goal/manifests/hosts/kanagawa01/web01.yml
+hermes atlas diff-host --manifest tests/fixtures/manifest-goal/manifests/hosts/kanagawa01/web01.yml --host-file tests/fixtures/manifest-goal/atlas/web01-host.yml
+
+hermes report hosts --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --format markdown
+hermes report projections --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --inventory tests/fixtures/manifest-goal/ansible/inventories/default/hosts.yml --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml
 
 hermes network summary
 hermes network summary --format json
@@ -205,6 +252,11 @@ Without `--apply`, `dns apply-zone` and `proxmox sync` return `dry_run: true`.
 Hermes must work without Atlas for tests and checkout-local smoke checks:
 
 ```bash
+mise exec python@3.11 -- python -m pip install -e '.[dev]'
+mise exec python@3.11 -- ruff check .
+mise exec python@3.11 -- ruff format --check .
+mise exec python@3.11 -- pytest
+
 PYTHONPATH=modules python3 commands/hermes.py --help
 PYTHONPATH=modules python3 -m hermes --help
 PYTHONPATH=modules python3 -m unittest discover -s tests -v
@@ -216,6 +268,8 @@ CI runs dependency install, editable install, `ruff check .`, and `pytest`.
 ## More Documentation
 
 - [docs/design.md](docs/design.md)
+- [docs/source-of-truth.md](docs/source-of-truth.md)
+- [docs/host-manifest.md](docs/host-manifest.md)
 - [docs/commands.md](docs/commands.md)
 - [docs/atlas-integration.md](docs/atlas-integration.md)
 - [docs/examples.md](docs/examples.md)

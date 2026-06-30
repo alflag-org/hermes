@@ -73,12 +73,20 @@ def validate_zone_text(zone: str, text: str) -> dict[str, Any]:
         if "IN" not in parts:
             errors.append(f"line {line_number}: missing IN class")
             continue
-        record_type = parts[parts.index("IN") + 1].upper() if parts.index("IN") + 1 < len(parts) else ""
+        record_type = (
+            parts[parts.index("IN") + 1].upper() if parts.index("IN") + 1 < len(parts) else ""
+        )
         if record_type and record_type not in SUPPORTED_TYPES and record_type not in {"SOA", "NS"}:
             errors.append(f"line {line_number}: unsupported record type {record_type}")
     if not has_soa:
         errors.append("missing SOA record")
-    return {"kind": "dns-zone-check", "version": "v1", "zone": zone, "ok": not errors, "errors": errors}
+    return {
+        "kind": "dns-zone-check",
+        "version": "v1",
+        "zone": zone,
+        "ok": not errors,
+        "errors": errors,
+    }
 
 
 def parse_zone_records(text: str) -> list[dict[str, Any]]:

@@ -22,7 +22,9 @@ def diff_state(actual_raw: Any, desired_raw: Any, site: str | None = None) -> di
             continue
         deltas: dict[str, Any] = {}
         for key in ("tags", "description"):
-            if desired_guest.get(key) is not None and desired_guest.get(key) != actual_guest.get(key):
+            if desired_guest.get(key) is not None and desired_guest.get(key) != actual_guest.get(
+                key
+            ):
                 deltas[key] = {"actual": actual_guest.get(key), "desired": desired_guest.get(key)}
         if deltas:
             changed.append(

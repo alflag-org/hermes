@@ -23,7 +23,9 @@ class ContextDiscoveryTest(unittest.TestCase):
 
     def test_hermes_workspace_environment_is_used(self) -> None:
         with patch.dict(os.environ, {"HERMES_WORKSPACE": str(FIXTURE)}):
-            context = discover_context(config_path="/tmp/hermes.yml", cwd=Path(tempfile.gettempdir()))
+            context = discover_context(
+                config_path="/tmp/hermes.yml", cwd=Path(tempfile.gettempdir())
+            )
 
         self.assertEqual(context["workspace"], str(FIXTURE.resolve()))
 

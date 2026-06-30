@@ -1,0 +1,25 @@
+version: 1
+kind: host
+metadata:
+  name: control01
+  site: kanagawa01
+  lifecycle: active
+spec:
+  zone: mgmt
+  address: 10.10.10.11
+  provider:
+    type: proxmox
+  platform:
+    type: vm
+  services:
+    - control
+  capabilities:
+    - admin
+catalog:
+  resource_id: host-control01
+  display_name: control01
+  description: Management control host
+  tags:
+    managed_by: daedalus
+    site: kanagawa01
+    zone: mgmt

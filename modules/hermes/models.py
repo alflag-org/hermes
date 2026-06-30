@@ -15,5 +15,7 @@ class WarningItem:
         return asdict(self)
 
 
-def warning(code: str, message: str, *, severity: str = "warning", source: str | None = None) -> dict[str, Any]:
+def warning(
+    code: str, message: str, *, severity: str = "warning", source: str | None = None
+) -> dict[str, Any]:
     return WarningItem(code=code, message=message, severity=severity, source=source).to_dict()

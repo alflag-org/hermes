@@ -5,12 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "hermes"
 version = "0.1.0"
-description = "Infrastructure operation gateway for Atlas script releases"
+description = "Read-only host manifest auditor and projection planner for Atlas"
 requires-python = ">=3.11"
 dependencies = [
   "PyYAML>=6.0",
   "jsonschema>=4.0",
   "proxmoxer>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=9.0",
+  "ruff>=0.15",
 ]
 
 [project.scripts]

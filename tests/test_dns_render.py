@@ -21,7 +21,9 @@ class DnsRenderTest(unittest.TestCase):
             }
         )
 
-        zone = render_zone("alflag.internal", records_from_dataset(dataset, "alflag.internal"), ttl=300)
+        zone = render_zone(
+            "alflag.internal", records_from_dataset(dataset, "alflag.internal"), ttl=300
+        )
 
         self.assertIn("$ORIGIN alflag.internal.", zone)
         self.assertIn("dns01 IN A 10.10.10.240", zone)

@@ -22,6 +22,17 @@ class DocsContractTest(unittest.TestCase):
         self.assertIn("dry-run default mutation", commands)
         self.assertIn("transitional mutation", commands)
         self.assertIn("hermes dns report", commands)
+        self.assertIn("hermes manifest check", commands)
+        self.assertIn("hermes report projections", commands)
+
+    def test_required_manifest_model_docs_exist(self) -> None:
+        source_of_truth = (REPO_ROOT / "docs" / "source-of-truth.md").read_text(encoding="utf-8")
+        host_manifest = (REPO_ROOT / "docs" / "host-manifest.md").read_text(encoding="utf-8")
+
+        self.assertIn("host manifest = source of truth", source_of_truth)
+        self.assertIn("Daedalus inventory = convergence projection", source_of_truth)
+        self.assertIn("manifests/hosts/<site>/*.yml", host_manifest)
+        self.assertIn("Zabbix-related values are rejected", host_manifest)
 
 
 if __name__ == "__main__":

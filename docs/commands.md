@@ -15,6 +15,18 @@ Safety categories:
 | --- | --- | --- | --- |
 | `hermes --help` | read-only | | `hermes --help` |
 | `hermes --version` | read-only | | `hermes --version` |
+| `hermes manifest list` | read-only | `--manifests`, `--format` | `hermes manifest list --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01` |
+| `hermes manifest summary` | read-only | `--manifests`, `--format` | `hermes manifest summary --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --format markdown` |
+| `hermes manifest check` | read-only | `--manifests`, `--strict`, `--format` | `hermes manifest check --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01` |
+| `hermes daedalus render` | plan/diff | `--manifests`, `--format` | `hermes daedalus render --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01` |
+| `hermes daedalus diff` | plan/diff | `--manifests`, `--inventory`, `--format` | `hermes daedalus diff --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --inventory tests/fixtures/manifest-goal/ansible/inventories/default/hosts.yml` |
+| `hermes cataloga render` | plan/diff | `--manifests`, `--format` | `hermes cataloga render --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01` |
+| `hermes cataloga diff` | plan/diff | `--manifests`, `--catalog`, `--format` | `hermes cataloga diff --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml` |
+| `hermes cataloga plan` | plan/diff | `--manifests`, `--catalog`, `--output`, `--format` | `hermes cataloga plan --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml --output /tmp/cataloga-host-import.yaml` |
+| `hermes atlas render-host` | plan/diff | `--manifest`, `--format` | `hermes atlas render-host --manifest tests/fixtures/manifest-goal/manifests/hosts/kanagawa01/web01.yml` |
+| `hermes atlas diff-host` | plan/diff | `--manifest`, `--host-file`, `--format` | `hermes atlas diff-host --manifest tests/fixtures/manifest-goal/manifests/hosts/kanagawa01/web01.yml --host-file tests/fixtures/manifest-goal/atlas/web01-host.yml` |
+| `hermes report hosts` | read-only | `--manifests`, `--format` | `hermes report hosts --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --format markdown` |
+| `hermes report projections` | read-only | `--manifests`, `--inventory`, `--catalog`, `--atlas-manifest`, `--atlas-host-file`, `--format` | `hermes report projections --manifests tests/fixtures/manifest-goal/manifests/hosts/kanagawa01 --inventory tests/fixtures/manifest-goal/ansible/inventories/default/hosts.yml --catalog tests/fixtures/manifest-goal/catalog/cataloga-hosts.yaml` |
 | `hermes context` | read-only | `--workspace`, `--site`, `--format`, `--output` | `hermes context --workspace tests/fixtures/daedalus-simple` |
 | `hermes network summary` | read-only | `--site`, `--format`, `--output` | `hermes network summary --format markdown` |
 | `hermes host show` | read-only | `--format` | `hermes host show --format yaml` |
@@ -27,10 +39,18 @@ Safety categories:
 | `hermes report summary` | read-only | `--workspace`, `--site`, `--format`, `--output` | `hermes report summary --workspace tests/fixtures/daedalus-simple --format json` |
 | `hermes maintenance sanity-check` | read-only | `--format` | `hermes maintenance sanity-check` |
 
+The manifest, Daedalus, Cataloga, Atlas, and projection report commands are the v0.1
+goal surface. They do not modify manifests, inventories, Cataloga, Atlas config, or
+external systems. `hermes cataloga plan --output` writes only the requested local review
+artifact.
+
 ## Cataloga
 
 | Command | Safety | Notes |
 | --- | --- | --- |
+| `hermes cataloga render --manifests PATH` | plan/diff | Renders the expected Cataloga host dataset from manifests. |
+| `hermes cataloga diff --manifests PATH --catalog PATH` | plan/diff | Compares the expected dataset with an exported Cataloga snapshot. |
+| `hermes cataloga plan --manifests PATH --catalog PATH` | plan/diff | Produces a reviewable import/update artifact. Writes only with `--output`. |
 | `hermes cataloga validate --file PATH` | read-only | Validates a file dataset. |
 | `hermes cataloga normalize --file PATH` | plan/diff | Prints normalized data, or writes only with `--output`. |
 | `hermes cataloga export` | read-only | Reads file dataset configured in Hermes config. |

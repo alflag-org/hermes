@@ -71,7 +71,9 @@ class ProxmoxApplyTest(unittest.TestCase):
 
         self.assertTrue(result["ok"])
         self.assertEqual(result["applied"], 2)
-        self.assertEqual(endpoint.calls, [{"tags": "dns;mgmt"}, {"description": "Recursive DNS server"}])
+        self.assertEqual(
+            endpoint.calls, [{"tags": "dns;mgmt"}, {"description": "Recursive DNS server"}]
+        )
 
 
 if __name__ == "__main__":

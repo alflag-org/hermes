@@ -78,6 +78,44 @@ def render_text(data: Any) -> str:
         lines.extend(_count_lines("services", data.get("services", {})))
         lines.extend(_warning_lines(data.get("warnings", [])))
         return "\n".join(lines)
+    if kind == "manifest-validation":
+        lines = [
+            f"ok: {str(data.get('ok', False)).lower()}",
+            f"hosts: {data.get('host_count', 0)}",
+        ]
+        lines.extend(_warning_lines(data.get("errors", [])))
+        lines.extend(_warning_lines(data.get("warnings", [])))
+        return "\n".join(lines)
+    if kind == "manifest-list":
+        lines = [f"hosts: {data.get('count', 0)}"]
+        for host in data.get("hosts", []):
+            lines.append(
+                "- "
+                + " ".join(
+                    [
+                        str(host.get("name")),
+                        f"site={host.get('site')}",
+                        f"lifecycle={host.get('lifecycle')}",
+                        f"zone={host.get('zone')}",
+                        f"address={host.get('address')}",
+                    ]
+                )
+            )
+        lines.extend(_warning_lines(data.get("errors", [])))
+        lines.extend(_warning_lines(data.get("warnings", [])))
+        return "\n".join(lines)
+    if kind in {"manifest-summary", "host-report"}:
+        lines = [f"hosts: {data.get('host_count', 0)}"]
+        lines.extend(_count_lines("sites", data.get("sites", {})))
+        lines.extend(_count_lines("lifecycles", data.get("lifecycles", {})))
+        lines.extend(_count_lines("zones", data.get("zones", {})))
+        lines.extend(_count_lines("providers", data.get("providers", {})))
+        lines.extend(_count_lines("platforms", data.get("platforms", {})))
+        lines.extend(_count_lines("services", data.get("services", {})))
+        lines.extend(_count_lines("capabilities", data.get("capabilities", {})))
+        lines.extend(_warning_lines(data.get("errors", [])))
+        lines.extend(_warning_lines(data.get("warnings", [])))
+        return "\n".join(lines)
     if kind == "dns-report" and "authoritative_hosts" in data:
         lines = [
             "authoritative_hosts: " + _join_or_dash(data.get("authoritative_hosts", [])),
@@ -93,10 +131,16 @@ def render_text(data: Any) -> str:
             f"workspace: {(data.get('context') or {}).get('workspace')}",
             f"site: {(data.get('context') or {}).get('site')}",
             f"hosts: {(data.get('host_summary') or {}).get('host_count', 0)}",
-            "active_networks: " + _join_or_dash(n.get("name") for n in (data.get("networks") or {}).get("active_networks", [])),
+            "active_networks: "
+            + _join_or_dash(
+                n.get("name") for n in (data.get("networks") or {}).get("active_networks", [])
+            ),
             "deprecated_networks: "
-            + _join_or_dash(n.get("name") for n in (data.get("networks") or {}).get("deprecated_networks", [])),
-            "authoritative_dns: " + _join_or_dash((data.get("dns") or {}).get("authoritative_hosts", [])),
+            + _join_or_dash(
+                n.get("name") for n in (data.get("networks") or {}).get("deprecated_networks", [])
+            ),
+            "authoritative_dns: "
+            + _join_or_dash((data.get("dns") or {}).get("authoritative_hosts", [])),
             "recursive_dns: " + _join_or_dash((data.get("dns") or {}).get("recursive_hosts", [])),
         ]
         lines.extend(_warning_lines(data.get("warnings", [])))
@@ -113,6 +157,35 @@ def render_text(data: Any) -> str:
         for name in ("missing", "extra", "changed"):
             if data.get(name):
                 lines.append(f"{name}: {len(data[name])}")
+        return "\n".join(lines)
+    if kind in {"daedalus-diff", "cataloga-diff", "atlas-host-diff"}:
+        lines = [
+            f"kind: {kind}",
+            f"ok: {str(data.get('ok', False)).lower()}",
+            f"mismatches: {len(data.get('mismatches', []))}",
+        ]
+        lines.extend(_warning_lines(data.get("mismatches", [])))
+        lines.extend(_warning_lines(data.get("warnings", [])))
+        return "\n".join(lines)
+    if kind == "projection-report":
+        lines = [
+            "Hermes projection report",
+            f"ok: {str(data.get('ok', False)).lower()}",
+            f"drift_mismatches: {(data.get('drift_summary') or {}).get('mismatches', 0)}",
+        ]
+        for name in (
+            "manifest_status",
+            "daedalus_projection_status",
+            "cataloga_projection_status",
+            "atlas_projection_status",
+        ):
+            status = data.get(name) or {}
+            lines.append(
+                f"{name}: provided={status.get('provided')} ok={status.get('ok')} "
+                f"problems={status.get('problems')} warnings={status.get('warnings')}"
+            )
+        lines.append("recommended_next_review_actions:")
+        lines.extend(f"- {item}" for item in data.get("recommended_next_review_actions", []))
         return "\n".join(lines)
     if kind == "apply-result":
         return "\n".join(
@@ -203,6 +276,62 @@ def render_markdown(data: Any) -> str:
                 *_markdown_warnings(data.get("warnings", [])),
             ]
         )
+    if kind == "manifest-validation":
+        return "\n".join(
+            [
+                "# Manifest Check",
+                "",
+                f"- OK: `{str(data.get('ok', False)).lower()}`",
+                f"- Host count: `{data.get('host_count', 0)}`",
+                "",
+                "## Errors",
+                "",
+                _warning_table(data.get("errors", [])),
+                "",
+                "## Warnings",
+                "",
+                _warning_table(data.get("warnings", [])),
+            ]
+        )
+    if kind == "manifest-list":
+        return "\n".join(
+            [
+                "# Manifest List",
+                "",
+                f"Host count: `{data.get('count', 0)}`",
+                "",
+                _manifest_table(data.get("hosts", [])),
+                "",
+                "## Errors",
+                "",
+                _warning_table(data.get("errors", [])),
+                "",
+                *_markdown_warnings(data.get("warnings", [])),
+            ]
+        )
+    if kind in {"manifest-summary", "host-report"}:
+        title = "Host Report" if kind == "host-report" else "Manifest Summary"
+        lines = [
+            f"# {title}",
+            "",
+            f"Host count: `{data.get('host_count', 0)}`",
+            "",
+        ]
+        if kind == "host-report":
+            lines.extend(["## Hosts", "", _manifest_table(data.get("hosts", [])), ""])
+        for label, key in (
+            ("Sites", "sites"),
+            ("Lifecycles", "lifecycles"),
+            ("Zones", "zones"),
+            ("Providers", "providers"),
+            ("Platforms", "platforms"),
+            ("Services", "services"),
+            ("Capabilities", "capabilities"),
+        ):
+            lines.extend([f"## {label}", "", _count_table(data.get(key, {})), ""])
+        lines.extend(["## Errors", "", _warning_table(data.get("errors", [])), ""])
+        lines.extend(_markdown_warnings(data.get("warnings", [])))
+        return "\n".join(lines)
     if kind == "dns-report" and "authoritative_hosts" in data:
         return "\n".join(
             [
@@ -281,6 +410,45 @@ def render_markdown(data: Any) -> str:
                 _bullet_list(data.get("suggested_manual_checks", [])),
             ]
         )
+    if kind in {"daedalus-diff", "cataloga-diff", "atlas-host-diff"}:
+        title = {
+            "daedalus-diff": "Daedalus Projection Diff",
+            "cataloga-diff": "Cataloga Projection Diff",
+            "atlas-host-diff": "Atlas Host Diff",
+        }[kind]
+        return "\n".join(
+            [
+                f"# {title}",
+                "",
+                f"- OK: `{str(data.get('ok', False)).lower()}`",
+                f"- Mismatches: `{len(data.get('mismatches', []))}`",
+                "",
+                "## Mismatches",
+                "",
+                _warning_table(data.get("mismatches", [])),
+                "",
+                *_markdown_warnings(data.get("warnings", [])),
+            ]
+        )
+    if kind == "projection-report":
+        drift = data.get("drift_summary") or {}
+        return "\n".join(
+            [
+                "# Projection Report",
+                "",
+                f"- OK: `{str(data.get('ok', False)).lower()}`",
+                f"- Drift mismatches: `{drift.get('mismatches', 0)}`",
+                f"- Warnings: `{drift.get('warnings', 0)}`",
+                "",
+                "## Status",
+                "",
+                _projection_status_table(data),
+                "",
+                "## Recommended Next Review Actions",
+                "",
+                _bullet_list(data.get("recommended_next_review_actions", [])),
+            ]
+        )
     return render_text(data)
 
 
@@ -315,7 +483,10 @@ def _join_or_dash(values: Any) -> str:
 def _network_table(networks: list[dict[str, Any]]) -> str:
     if not networks:
         return "_None._"
-    lines = ["| Name | VLAN | CIDR | Gateway | Purpose | Status | Reason |", "| --- | ---: | --- | --- | --- | --- | --- |"]
+    lines = [
+        "| Name | VLAN | CIDR | Gateway | Purpose | Status | Reason |",
+        "| --- | ---: | --- | --- | --- | --- | --- |",
+    ]
     for network in networks:
         lines.append(
             "| {name} | {vlan} | {cidr} | {gateway} | {purpose} | {status} | {reason} |".format(
@@ -334,7 +505,10 @@ def _network_table(networks: list[dict[str, Any]]) -> str:
 def _host_table(hosts: list[dict[str, Any]]) -> str:
     if not hosts:
         return "_None._"
-    lines = ["| Name | Ansible Host | Zone | Groups | Services |", "| --- | --- | --- | --- | --- |"]
+    lines = [
+        "| Name | Ansible Host | Zone | Groups | Services |",
+        "| --- | --- | --- | --- | --- |",
+    ]
     for host in hosts:
         lines.append(
             "| {name} | {ansible_host} | {zone} | {groups} | {services} |".format(
@@ -343,6 +517,33 @@ def _host_table(hosts: list[dict[str, Any]]) -> str:
                 zone=host.get("zone") or "",
                 groups=", ".join(host.get("groups", [])),
                 services=", ".join(host.get("services", [])),
+            )
+        )
+    return "\n".join(lines)
+
+
+def _manifest_table(hosts: list[dict[str, Any]]) -> str:
+    if not hosts:
+        return "_None._"
+    lines = [
+        "| Name | Site | Lifecycle | Zone | Address | Provider | Platform | "
+        "Services | Capabilities | Catalog ID |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for host in hosts:
+        lines.append(
+            "| {name} | {site} | {lifecycle} | {zone} | {address} | {provider} | "
+            "{platform} | {services} | {capabilities} | {catalog} |".format(
+                name=host.get("name") or "",
+                site=host.get("site") or "",
+                lifecycle=host.get("lifecycle") or "",
+                zone=host.get("zone") or "",
+                address=host.get("address") or "",
+                provider=host.get("provider") or "",
+                platform=host.get("platform") or "",
+                services=", ".join(host.get("services", [])),
+                capabilities=", ".join(host.get("capabilities", [])),
+                catalog=host.get("catalog_resource_id") or "",
             )
         )
     return "\n".join(lines)
@@ -379,6 +580,30 @@ def _warning_table(warnings: list[dict[str, Any]]) -> str:
                 code=item.get("code") or "",
                 message=item.get("message") or "",
                 source=item.get("source") or "",
+            )
+        )
+    return "\n".join(lines)
+
+
+def _projection_status_table(data: dict[str, Any]) -> str:
+    rows = [
+        ("Manifest", data.get("manifest_status") or {}),
+        ("Daedalus", data.get("daedalus_projection_status") or {}),
+        ("Cataloga", data.get("cataloga_projection_status") or {}),
+        ("Atlas", data.get("atlas_projection_status") or {}),
+    ]
+    lines = [
+        "| Projection | Provided | OK | Problems | Warnings |",
+        "| --- | --- | --- | ---: | ---: |",
+    ]
+    for label, status in rows:
+        lines.append(
+            "| {label} | {provided} | {ok} | {problems} | {warnings} |".format(
+                label=label,
+                provided=status.get("provided"),
+                ok=status.get("ok"),
+                problems=status.get("problems"),
+                warnings=status.get("warnings"),
             )
         )
     return "\n".join(lines)

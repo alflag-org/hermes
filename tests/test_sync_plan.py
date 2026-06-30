@@ -30,7 +30,9 @@ class SyncPlanTest(unittest.TestCase):
         plan = plan_from_diff(diff_state(actual, desired, "kanagawa01"))
 
         self.assertEqual(plan["domain"], "proxmox")
-        self.assertEqual([action["action"] for action in plan["actions"]], ["update-tags", "update-description"])
+        self.assertEqual(
+            [action["action"] for action in plan["actions"]], ["update-tags", "update-description"]
+        )
 
 
 if __name__ == "__main__":

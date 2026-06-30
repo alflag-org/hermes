@@ -10,12 +10,18 @@ from hermes.dns.zone import render_zone
 
 class DnsApplyPlanTest(unittest.TestCase):
     def test_diff_zone_text_returns_upsert_and_delete_actions(self) -> None:
-        desired = render_zone("alflag.internal", [{"name": "new", "type": "A", "value": "10.0.0.2"}])
-        current = render_zone("alflag.internal", [{"name": "old", "type": "A", "value": "10.0.0.1"}])
+        desired = render_zone(
+            "alflag.internal", [{"name": "new", "type": "A", "value": "10.0.0.2"}]
+        )
+        current = render_zone(
+            "alflag.internal", [{"name": "old", "type": "A", "value": "10.0.0.1"}]
+        )
 
         diff = diff_zone_text("alflag.internal", desired, current)
 
-        self.assertEqual([action["action"] for action in diff["actions"]], ["upsert-record", "delete-record"])
+        self.assertEqual(
+            [action["action"] for action in diff["actions"]], ["upsert-record", "delete-record"]
+        )
 
     def test_apply_zone_file_is_dry_run_without_apply(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -87,7 +93,9 @@ class DnsApplyPlanTest(unittest.TestCase):
                 render_zone("alflag.internal", [{"name": "new", "type": "A", "value": "10.0.0.2"}]),
                 encoding="utf-8",
             )
-            original = render_zone("alflag.internal", [{"name": "old", "type": "A", "value": "10.0.0.1"}])
+            original = render_zone(
+                "alflag.internal", [{"name": "old", "type": "A", "value": "10.0.0.1"}]
+            )
             current.write_text(original, encoding="utf-8")
 
             with self.assertRaisesRegex(Exception, "command failed"):

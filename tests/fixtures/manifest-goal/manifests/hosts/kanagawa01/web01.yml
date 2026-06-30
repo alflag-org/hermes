@@ -1,0 +1,25 @@
+version: 1
+kind: host
+metadata:
+  name: web01
+  site: kanagawa01
+  lifecycle: active
+spec:
+  zone: dmz
+  address: 10.10.30.21
+  provider:
+    type: proxmox
+  platform:
+    type: vm
+  services:
+    - web
+  capabilities:
+    - public_http
+catalog:
+  resource_id: host-web01
+  display_name: web01
+  description: Public-facing web host
+  tags:
+    managed_by: daedalus
+    site: kanagawa01
+    zone: dmz
