@@ -1,0 +1,9 @@
+[settings]
+lockfile = true
+
+[tools]
+python = "3.12"
+actionlint = "1.7.12"
+
+[env]
+_.python.venv = { path = ".venv", create = true, uv_create_args = ["--seed"] }
