@@ -252,16 +252,21 @@ Without `--apply`, `dns apply-zone` and `proxmox sync` return `dry_run: true`.
 Hermes must work without Atlas for tests and checkout-local smoke checks:
 
 ```bash
-mise exec python@3.11 -- python -m pip install -e '.[dev]'
-mise exec python@3.11 -- ruff check .
-mise exec python@3.11 -- ruff format --check .
-mise exec python@3.11 -- pytest
+mise install
+python -m pip install -e '.[dev]'
+ruff check .
+ruff format --check .
+pytest
 
 PYTHONPATH=modules python3 commands/hermes.py --help
 PYTHONPATH=modules python3 -m hermes --help
 PYTHONPATH=modules python3 -m unittest discover -s tests -v
 pytest
 ```
+
+mise manages the Python interpreter and external tools used for local development
+and CI. Python package dependencies remain in `pyproject.toml` and the Atlas release
+requirements files. mise does not replace the Atlas-managed production runtime.
 
 CI runs dependency install, editable install, `ruff check .`, and `pytest`.
 
